@@ -249,12 +249,15 @@ Redis 的丰富数据结构使其能够高效地解决各种不同场景下的�
 
 ## 哈希(Hash)命令
 
+![image-20250420223030976](C:\Users\刘世杰\AppData\Roaming\Typora\typora-user-images\image-20250420223030976.png)
+
 1. **字段操作**
+   
    - `HSET key field value` - 设置哈希字段值
    - `HGET key field` - 获取哈希字段值
    - `HDEL key field` - 删除哈希字段
    - `HEXISTS key field` - 检查字段是否存在
-
+   
 2. **批量操作**
    - `HMSET key field1 value1 field2 value2` - 批量设置字段值
    - `HMGET key field1 field2` - 批量获取字段值
@@ -358,3 +361,28 @@ Redis 的丰富数据结构使其能够高效地解决各种不同场景下的�
    - `BGSAVE` - 异步保存数据到磁盘
 
 这些是Redis最常用的核心命令，掌握它们可以满足大多数日常开发需求。
+
+
+
+## Key的层级格式
+
+String类型的三种格式
+
+​	● 字符串
+
+​	● int
+
+​	● float
+
+Redis的key的格式:
+
+```shell
+[项目名]:[业务名]:[类型]:[id]
+```
+
+
+
+
+
+
+
