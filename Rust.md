@@ -114,3 +114,125 @@ Rust 提供了高级的语言特性（如泛型、trait、闭包、迭代器、�
 Rust 是一门雄心勃勃的语言，它成功地将**系统级的性能和控制力**与**高级语言的安全性和开发效率**结合在了一起。它通过创新的机制在编译期解决了许多传统上在运行时才能发现或难以解决的顽疾（尤其是内存和并发错误）。虽然学习曲线存在，但其带来的安全性、性能和现代化的开发体验，使其成为系统编程、高性能服务和关键基础设施领域极具吸引力的选择。其活跃的社区和强大的工具链也极大地提升了开发者的生产力。
 
 如果你想追求性能、安全性和现代开发体验，并且愿意投入时间去掌握其独特的概念，Rust 绝对是一门值得学习和使用的强大语言。
+
+
+
+## 一、cargo
+
+---
+
+以下是 Rust 构建工具和包管理器 `cargo` 的**常用命令清单**，覆盖了开发全流程的核心操作：
+
+### 1. 🏗 **项目创建与初始化**
+
+| 命令                             | 说明                                               |
+| -------------------------------- | -------------------------------------------------- |
+| `cargo new <project_name>`       | 创建**二进制 (可执行)** 项目（默认生成 `main.rs`） |
+| `cargo new --lib <library_name>` | 创建**库**项目（生成 `lib.rs`）                    |
+| `cargo init`                     | 在当前目录初始化新项目（适合已有目录）             |
+| `cargo init --lib`               | 在当前目录初始化库项目                             |
+
+---
+
+### 2. 🛠 **构建与编译**
+| 命令                    | 说明                                                         |
+| ----------------------- | ------------------------------------------------------------ |
+| `cargo build`           | 编译项目（生成 debug 版，输出到 `target/debug/`）            |
+| `cargo build --release` | 编译**优化后的发布版**（输出到 `target/release/`，性能更高） |
+| `cargo check`           | **快速检查代码**（确保能编译通过，不生成可执行文件，速度极快） |
+| `cargo clean`           | **清理**构建产物（删除 `target` 目录）                       |
+
+---
+
+### 3. ▶ **运行与测试**
+| 命令                      | 说明                                          |
+| ------------------------- | --------------------------------------------- |
+| `cargo run`               | 编译并**运行**项目（自动 `build` 未编译时）   |
+| `cargo run --release`     | 编译发布版并运行                              |
+| `cargo run -- <args>`     | 带参数运行程序（如 `cargo run -- arg1 arg2`） |
+| `cargo test`              | **运行所有测试**（检测 `#[test]` 标记的函数） |
+| `cargo test <test_name>`  | 运行**指定名称**的测试（支持模糊匹配）        |
+| `cargo test -- --ignored` | 运行被标记为 `#[ignore]` 的测试               |
+| `cargo bench`             | 运行基准测试（需要 `#[bench]`，Nightly Rust） |
+
+---
+
+### 4. 📦 **依赖管理**
+| 命令                          | 说明                                                         |
+| ----------------------------- | ------------------------------------------------------------ |
+| `cargo add <crate_name>`      | **添加依赖**到 `Cargo.toml`（需安装 `cargo-edit`）<br>例：`cargo add serde` |
+| `cargo add <crate>@<version>` | 添加指定版本依赖<br>例：`cargo add serde@1.0`                |
+| `cargo update`                | 更新依赖（根据 `Cargo.lock` 升级到兼容版本）                 |
+| `cargo update -p <crate>`     | 更新**指定依赖**                                             |
+| `cargo tree`                  | **可视化依赖树**（显示所有传递依赖）                         |
+| `cargo tree -p <crate>`       | 查看某个依赖被谁引入                                         |
+
+---
+
+### 5. 📝 **代码质量与文档**
+| 命令                                 | 说明                                                    |
+| ------------------------------------ | ------------------------------------------------------- |
+| `cargo fmt`                          | **格式化代码**（使用 rustfmt，保持代码风格统一）        |
+| `cargo clippy`                       | **静态代码检查**（需安装 clippy，捕捉常见错误和优化点） |
+| `cargo doc`                          | **生成项目文档**（输出到 `target/doc/`）                |
+| `cargo doc --open`                   | 生成文档并在浏览器中打开                                |
+| `cargo doc --document-private-items` | 生成包含私有项的文档                                    |
+
+---
+
+### 6. 📤 **发布与安装**
+| 命令                           | 说明                                                   |
+| ------------------------------ | ------------------------------------------------------ |
+| `cargo publish`                | **发布 crate 到 crates.io**（需先登录 `cargo login`）  |
+| `cargo install <crate_name>`   | **全局安装二进制 crate**（如 `cargo install ripgrep`） |
+| `cargo install --path .`       | 将当前项目安装为全局命令                               |
+| `cargo uninstall <crate_name>` | 卸载全局安装的 crate                                   |
+
+---
+
+### 7. 🔍 **高级调试与分析**
+| 命令                     | 说明                                                        |
+| ------------------------ | ----------------------------------------------------------- |
+| `cargo build -vv`        | **超详细构建输出**（调试构建问题时使用，`-v` 是普通详细）   |
+| `cargo rustc -- <flags>` | 向 rustc 传递额外参数（如 `cargo rustc -- -C opt-level=3`） |
+| `cargo expand`           | 查看宏展开后的代码（需安装 `cargo-expand`）                 |
+
+---
+
+### 8. ⚙ **配置与信息**
+| 命令                      | 说明                                       |
+| ------------------------- | ------------------------------------------ |
+| `cargo --version`         | 查看 cargo 版本                            |
+| `cargo version --verbose` | 查看 cargo 和 rustc 的详细版本信息         |
+| `cargo metadata`          | 以 JSON 格式输出项目元数据（IDE/工具常用） |
+| `cargo search <keyword>`  | 在 crates.io 搜索 crate                    |
+
+---
+
+### 9. 💡 高效工作流建议：
+1. **日常开发循环**：  
+   ```bash
+   cargo check  # 快速检查语法
+   cargo clippy # 静态检查
+   cargo test   # 跑测试
+   cargo run    # 运行
+   ```
+2. **提交代码前**：  
+   ```bash
+   cargo fmt    # 统一格式
+   cargo clippy # 确保代码质量
+   cargo test   # 验证功能
+   ```
+3. **性能敏感场景**：  
+   ```bash
+   cargo build --release # 编译发布版
+   cargo run --release   # 运行发布版
+   ```
+
+> 小贴士：安装常用插件提升体验：
+> ```bash
+> cargo install cargo-edit  # 支持 cargo add/rm/upgrade
+> cargo install cargo-watch # 文件变化时自动执行命令（如 `cargo watch -x check`）
+> ```
+
+掌握这些命令，你就能高效驾驭 Rust 的开发全流程！🚀
