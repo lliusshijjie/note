@@ -2950,7 +2950,7 @@ watcher.on('change', (path) => {
 
 ### 10. 常见错误解决方案
 
-### 1. 模块未找到
+#### 10.1 模块未找到
 ```bash
 Error: Cannot find module './utils'
 ```
@@ -2959,7 +2959,7 @@ Error: Cannot find module './utils'
 - 确认文件扩展名（ESM 必须明确扩展名）
 - 使用 `path.resolve` 确保正确路径
 
-### 2. 目录导入失败
+#### 10.2 目录导入失败
 ```bash
 Error [ERR_UNSUPPORTED_DIR_IMPORT]: Directory import not supported
 ```
@@ -2967,7 +2967,7 @@ Error [ERR_UNSUPPORTED_DIR_IMPORT]: Directory import not supported
 - 明确指定目录入口文件：`import './config/index.js'`
 - 添加 `package.json` 定义 `"main"` 字段
 
-### 3. 模块初始化错误
+#### 10.3 模块初始化错误
 ```bash
 TypeError: myModule.function is not a function
 ```
@@ -3922,3 +3922,449 @@ describe('GET /users', () => {
 ```
 
 Express 以其简洁性、灵活性和强大的中间件生态，成为 Node.js Web 开发的首选框架。无论是构建简单的 REST API 还是复杂的企业级应用，Express 都能提供高效、可靠的解决方案。随着 Express 5.0 的发布，它将进一步融入现代 JavaScript 特性，保持其在 Node.js 生态中的核心地位。
+
+
+
+## 十三、Express 中的 Request 和 Response 
+
+Express 框架的核心在于它对 Node.js 原生 HTTP 模块的封装，特别是对请求（Request）和响应（Response）对象的增强。这些对象提供了丰富的属性和方法，极大简化了 Web 开发。
+
+### 1. Request 对象（req）
+
+Request 对象表示 HTTP 请求，包含客户端发送的所有信息。以下是其核心属性和方法：
+
+### 1.1 基础属性
+| **属性**          | **描述**                     | **示例**                          |
+| ----------------- | ---------------------------- | --------------------------------- |
+| `req.method`      | HTTP 请求方法                | `GET`, `POST`, `PUT`, `DELETE`    |
+| `req.protocol`    | 请求协议 (`http` 或 `https`) | `'https'`                         |
+| `req.secure`      | 是否通过 HTTPS 发起          | `true` (当 protocol 为 https)     |
+| `req.hostname`    | 主机名 (不含端口号)          | `'example.com'`                   |
+| `req.path`        | URL 路径部分                 | `'/users/profile'`                |
+| `req.originalUrl` | 完整原始 URL                 | `'/users?id=123'`                 |
+| `req.ip`          | 客户端 IP 地址               | `'192.168.1.100'`                 |
+| `req.subdomains`  | 子域名数组                   | `['api', 'v2']`                   |
+| `req.xhr`         | 是否是 AJAX 请求             | `true` (当 X-Requested-With 存在) |
+
+### 1.2 参数获取
+| **属性/方法**       | **描述**                           | **示例**                     |
+| ------------------- | ---------------------------------- | ---------------------------- |
+| `req.params`        | 路由参数对象                       | `{ userId: '123' }`          |
+| `req.query`         | 查询字符串对象                     | `{ page: '2', limit: '10' }` |
+| `req.body`          | 请求体数据 (需 body-parser 中间件) | `{ username: 'john' }`       |
+| `req.cookies`       | Cookies 对象 (需 cookie-parser)    | `{ sessionId: 'abc123' }`    |
+| `req.signedCookies` | 签名 Cookies 对象                  | `{ userId: '123' }`          |
+| `req.get(field)`    | 获取请求头字段                     | `req.get('Content-Type')`    |
+
+### 1.3 文件上传
+```javascript
+// 使用 multer 中间件
+const multer = require('multer');
+const upload = multer({ dest: 'uploads/' });
+
+app.post('/upload', upload.single('avatar'), (req, res) => {
+  console.log(req.file); // 上传文件信息
+  /*
+  {
+    fieldname: 'avatar',
+    originalname: 'profile.jpg',
+    encoding: '7bit',
+    mimetype: 'image/jpeg',
+    size: 12345,
+    destination: 'uploads/',
+    filename: 'abc123.jpg',
+    path: 'uploads/abc123.jpg'
+  }
+  */
+});
+```
+
+### 1.4 实用方法
+```javascript
+// 内容协商
+const acceptType = req.accepts(['json', 'html']); 
+// 返回客户端优先接受的类型
+
+// 检查内容类型
+if (req.is('json')) {
+  // 处理 JSON 数据
+}
+
+// 范围请求
+const range = req.range(1000); // 解析 Range 头
+// [ { start: 0, end: 499 }, { start: 500, end: 999 } ]
+```
+
+### 2. Response 对象（res）
+
+Response 对象用于构建和发送 HTTP 响应，提供多种发送响应的方法。
+
+#### 2.1 响应发送方法
+| **方法**               | **描述**                 | **示例**                      |
+| ---------------------- | ------------------------ | ----------------------------- |
+| `res.send(body)`       | 发送各种类型响应         | `res.send('Hello')`           |
+| `res.json(obj)`        | 发送 JSON 响应           | `res.json({ success: true })` |
+| `res.jsonp(obj)`       | 发送 JSONP 响应          | `res.jsonp({ data: [...] })`  |
+| `res.sendFile(path)`   | 发送文件                 | `res.sendFile('/resume.pdf')` |
+| `res.sendStatus(code)` | 发送状态码和对应状态消息 | `res.sendStatus(404)`         |
+| `res.end()`            | 结束响应过程             | `res.end()`                   |
+
+#### 2.2 响应头操作
+| **方法**                   | **描述**          | **示例**                               |
+| -------------------------- | ----------------- | -------------------------------------- |
+| `res.status(code)`         | 设置状态码        | `res.status(201).send(...)`            |
+| `res.set(field, value)`    | 设置响应头        | `res.set('Content-Type', 'text/html')` |
+| `res.append(field, value)` | 追加响应头值      | `res.append('Set-Cookie', '...')`      |
+| `res.type(type)`           | 设置 Content-Type | `res.type('png')`                      |
+| `res.location(path)`       | 设置 Location 头  | `res.location('/new-path')`            |
+| `res.vary(field)`          | 设置 Vary 头      | `res.vary('User-Agent')`               |
+
+#### 2.3 重定向与视图渲染
+```javascript
+// 重定向
+res.redirect('/new-location'); // 302 临时重定向
+res.redirect(301, '/permanent-location'); // 301 永久重定向
+
+// 视图渲染 (需模板引擎)
+res.render('profile', { 
+  user: req.user,
+  title: '用户资料'
+});
+
+// 附件下载
+res.download('/reports/sales.pdf'); // 自动设置 Content-Disposition
+res.download('/data.csv', 'quarterly-report.csv'); // 自定义文件名
+```
+
+#### 2.4 Cookie 操作
+```javascript
+// 设置 Cookie
+res.cookie('session', 'abc123', {
+  maxAge: 24 * 60 * 60 * 1000, // 1天
+  httpOnly: true,
+  secure: true,
+  sameSite: 'strict'
+});
+
+// 清除 Cookie
+res.clearCookie('session', {
+  httpOnly: true,
+  secure: true
+});
+```
+
+#### 2.5 高级响应方法
+```javascript
+// 流式响应
+const fs = require('fs');
+const stream = fs.createReadStream('large-video.mp4');
+res.type('mp4');
+stream.pipe(res);
+
+// 分块传输
+res.write('First chunk\n');
+res.write('Second chunk\n');
+res.end('Final chunk');
+
+// 设置缓存
+res.set('Cache-Control', 'public, max-age=3600'); // 1小时缓存
+res.etag('md5-hash-value'); // 设置 ETag
+res.lastModified(new Date()); // 设置最后修改时间
+```
+
+### 3. Request 和 Response 实际应用场景
+
+#### 3.1 RESTful API 实现
+```javascript
+// 获取用户列表
+app.get('/api/users', (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  
+  const users = UserService.getUsers(page, limit);
+  res.json({
+    data: users,
+    page,
+    limit,
+    total: UserService.getTotalCount()
+  });
+});
+
+// 创建用户
+app.post('/api/users', (req, res) => {
+  const newUser = req.body;
+  
+  if (!newUser.name || !newUser.email) {
+    return res.status(400).json({ 
+      error: '缺少必要字段' 
+    });
+  }
+  
+  const createdUser = UserService.createUser(newUser);
+  res.status(201).location(`/api/users/${createdUser.id}`).json(createdUser);
+});
+
+// 更新用户
+app.put('/api/users/:id', (req, res) => {
+  const userId = req.params.id;
+  const updates = req.body;
+  
+  const updatedUser = UserService.updateUser(userId, updates);
+  if (!updatedUser) {
+    return res.status(404).json({ error: '用户不存在' });
+  }
+  
+  res.json(updatedUser);
+});
+```
+
+#### 3.2 表单处理与文件上传
+```javascript
+const upload = multer({ 
+  dest: 'uploads/',
+  limits: { fileSize: 5 * 1024 * 1024 } // 5MB
+});
+
+app.post('/profile', upload.single('avatar'), (req, res) => {
+  const formData = req.body;
+  const avatarFile = req.file;
+  
+  if (!avatarFile) {
+    return res.status(400).send('请上传头像');
+  }
+  
+  // 处理表单数据
+  UserService.updateProfile(req.user.id, {
+    ...formData,
+    avatarPath: avatarFile.path
+  });
+  
+  res.redirect('/profile?success=true');
+});
+```
+
+#### 3.3 内容协商
+```javascript
+app.get('/article/:id', (req, res) => {
+  const article = ArticleService.getArticle(req.params.id);
+  
+  // 根据 Accept 头返回不同格式
+  res.format({
+    'text/html': () => {
+      res.render('article', { article });
+    },
+    'application/json': () => {
+      res.json(article);
+    },
+    'text/plain': () => {
+      res.send(`标题: ${article.title}\n\n${article.content}`);
+    },
+    default: () => {
+      res.status(406).send('不支持的格式');
+    }
+  });
+});
+```
+
+#### 3.4 错误处理中间件
+```javascript
+// 自定义错误处理
+app.use((err, req, res, next) => {
+  // 记录错误日志
+  console.error(`[${new Date().toISOString()}] ${req.method} ${req.url}`, err);
+  
+  // 设置响应状态码
+  const status = err.status || 500;
+  
+  // 根据请求类型返回不同响应
+  if (req.xhr) {
+    res.status(status).json({
+      error: {
+        message: err.message || '服务器错误',
+        code: err.code
+      }
+    });
+  } else {
+    res.status(status).render('error', {
+      status,
+      message: err.message || '服务器错误',
+      stack: process.env.NODE_ENV === 'development' ? err.stack : null
+    });
+  }
+});
+```
+
+### 4. Express 4.x 和 5.x 的差异
+
+#### 4.1 Request 对象增强
+| **特性**         | Express 4.x             | Express 5.x          |
+| ---------------- | ----------------------- | -------------------- |
+| 异步错误处理     | 需手动调用 next(err)    | 自动捕获 async 错误  |
+| 参数解析         | 依赖 body-parser 中间件 | 内置更强大的解析器   |
+| 路由参数类型转换 | 需手动转换              | 支持参数类型自动转换 |
+
+#### 4.2 Response 对象改进
+| **特性**         | Express 4.x    | Express 5.x              |
+| ---------------- | -------------- | ------------------------ |
+| res.send() 方法  | 不支持 Promise | 支持返回 Promise         |
+| 流式响应错误处理 | 需手动监听错误 | 自动处理流错误           |
+| 内容协商         | 有限支持       | 增强的 res.format() 方法 |
+
+### 5. 最佳实践与性能技巧
+
+#### 5.1 请求处理优化
+```javascript
+// 使用中间件过滤无效请求
+app.use((req, res, next) => {
+  // 检查无效的 User-Agent
+  if (req.get('User-Agent').includes('BadBot')) {
+    return res.status(403).send('Forbidden');
+  }
+  
+  // 限制大文件上传
+  if (req.get('Content-Length') > 10 * 1024 * 1024) {
+    return res.status(413).send('文件过大');
+  }
+  
+  next();
+});
+
+// 提前结束无效请求
+app.get('/api/data', (req, res) => {
+  if (!isValidToken(req.query.token)) {
+    return res.sendStatus(401); // 提前返回
+  }
+  
+  // 处理有效请求
+  // ...
+});
+```
+
+#### 5.2 响应优化策略
+```javascript
+// 启用压缩
+const compression = require('compression');
+app.use(compression());
+
+// 设置缓存头
+app.use('/static', express.static('public', {
+  maxAge: '1d',
+  setHeaders: (res, path) => {
+    if (path.endsWith('.js')) {
+      res.set('Content-Encoding', 'gzip');
+    }
+  }
+}));
+
+// 流式响应大文件
+app.get('/large-file', (req, res) => {
+  const fileStream = fs.createReadStream('large-data.bin');
+  res.type('application/octet-stream');
+  
+  // 处理中断连接
+  req.on('close', () => {
+    fileStream.destroy();
+  });
+  
+  fileStream.pipe(res);
+});
+```
+
+### 6. 常见问题解决方案
+
+#### 6.1 请求体无法解析
+**问题**：`req.body` 始终为 undefined  
+**解决**：
+```javascript
+// 添加合适的 body-parser 中间件
+app.use(express.json()); // 解析 JSON
+app.use(express.urlencoded({ extended: true })); // 解析表单
+```
+
+#### 6.2 文件上传问题
+**问题**：文件上传失败或无法访问  
+**解决**：
+```javascript
+// 确保正确配置 multer
+const upload = multer({ 
+  dest: 'uploads/',
+  limits: { 
+    fileSize: 10 * 1024 * 1024 // 10MB
+  }
+});
+
+// 确保目录权限正确
+fs.mkdirSync('uploads', { recursive: true });
+```
+
+#### 6.3 跨域请求问题
+**解决**：
+```javascript
+// 使用 cors 中间件
+const cors = require('cors');
+app.use(cors({
+  origin: 'https://example.com',
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+```
+
+#### 6.4 Cookie 无法设置
+**解决**：
+```javascript
+// 确保使用 cookie-parser
+const cookieParser = require('cookie-parser');
+app.use(cookieParser());
+
+// 检查安全设置
+res.cookie('session', 'value', {
+  secure: true, // HTTPS 必需
+  httpOnly: true,
+  sameSite: 'Lax' // 或 'Strict'
+});
+```
+
+### 7. 总结：核心要点回顾
+
+#### 7.1 Request 对象关键点：
+1. **参数获取**：
+   - `req.params`：路由参数
+   - `req.query`：查询字符串
+   - `req.body`：请求体数据
+2. **请求分析**：
+   - `req.get()`：获取请求头
+   - `req.accepts()`：内容协商
+   - `req.is()`：检查内容类型
+3. **文件处理**：
+   - `req.file`：单个上传文件
+   - `req.files`：多个上传文件
+
+#### 7.2 Response 对象关键点：
+1. **响应发送**：
+   - `res.send()`：通用响应
+   - `res.json()`：JSON 响应
+   - `res.render()`：模板渲染
+2. **流控制**：
+   - `res.status()`：设置状态码
+   - `res.set()`：设置响应头
+   - `res.redirect()`：重定向
+3. **高级功能**：
+   - `res.download()`：文件下载
+   - `res.format()`：内容协商
+   - `res.cookie()`：Cookie 管理
+
+#### 7.3 最佳实践：
+1. **请求处理**：
+   - 尽早验证输入参数
+   - 使用中间件处理公共逻辑
+   - 合理限制请求大小
+2. **响应优化**：
+   - 设置缓存头减少重复请求
+   - 使用流处理大文件
+   - 启用压缩减少传输大小
+3. **错误处理**：
+   - 统一错误响应格式
+   - 区分客户端和服务端错误
+   - 记录详细错误日志
+
+Express 的请求和响应对象是 Web 开发的核心工具，通过熟练掌握它们的属性和方法，可以高效构建健壮的 Web 应用和 API 服务。
