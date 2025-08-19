@@ -4368,3 +4368,472 @@ res.cookie('session', 'value', {
    - 记录详细错误日志
 
 Express 的请求和响应对象是 Web 开发的核心工具，通过熟练掌握它们的属性和方法，可以高效构建健壮的 Web 应用和 API 服务。
+
+
+
+## 十四、EJS 模板引擎
+
+EJS (Embedded JavaScript) 是 Node.js 生态中最流行的模板引擎之一，它允许开发者在 HTML 中嵌入 JavaScript 代码，实现动态内容渲染。EJS 以其简洁的语法和强大的功能成为构建动态 Web 应用的首选工具。
+
+### 1. EJS 核心特性
+
+#### 1.1 核心优势
+
+- **简单易学**：语法类似 HTML，学习曲线平缓
+- **JavaScript 嵌入**：直接在模板中使用 JS 逻辑
+- **组件复用**：支持模板片段和布局
+- **快速高效**：编译为 JavaScript 函数，执行速度快
+- **灵活扩展**：支持自定义过滤器和标签
+
+#### 1.2 语法特点
+| **语法** | **作用**             | **示例**                         |
+| -------- | -------------------- | -------------------------------- |
+| `<%`     | 执行 JavaScript 代码 | `<% for(let i=0; i<5; i++) { %>` |
+| `<%=`    | 输出转义后的值       | `<%= user.name %>`               |
+| `<%-`    | 输出原始 HTML        | `<%- '<strong>Bold</strong>' %>` |
+| `%>`     | 结束标签             | `<% } %>`                        |
+| `<%#`    | 注释                 | `<%# This is a comment %>`       |
+
+### 2. EJS 安装与基础使用
+
+#### 2.1 安装
+```bash
+npm install ejs
+```
+
+#### 2.2 Express 集成
+```javascript
+const express = require('express');
+const app = express();
+
+// 设置 EJS 为模板引擎
+app.set('view engine', 'ejs');
+
+// 设置模板目录 (默认为 views)
+app.set('views', path.join(__dirname, 'templates'));
+
+// 渲染模板
+app.get('/', (req, res) => {
+  res.render('index', {
+    title: 'EJS 首页',
+    user: { name: '张三', age: 28 },
+    items: ['苹果', '香蕉', '橙子']
+  });
+});
+```
+
+#### 2.3 基础模板示例
+```ejs
+<!-- views/index.ejs -->
+<!DOCTYPE html>
+<html>
+<head>
+  <title><%= title %></title>
+</head>
+<body>
+  <h1>欢迎, <%= user.name %>!</h1>
+  
+  <% if (user.age >= 18) { %>
+    <p>您已成年</p>
+  <% } else { %>
+    <p>您未成年</p>
+  <% } %>
+  
+  <ul>
+    <% items.forEach(item => { %>
+      <li><%= item %></li>
+    <% }) %>
+  </ul>
+  
+  <%- include('footer') %>
+</body>
+</html>
+```
+
+### 3. EJS 高级功能详解
+
+#### 3.1 布局系统 (Layouts)
+```ejs
+<!-- views/layout.ejs -->
+<!DOCTYPE html>
+<html>
+<head>
+  <title><%= title %></title>
+  <%- include('partials/head') %>
+</head>
+<body>
+  <%- include('partials/header') %>
+  
+  <main>
+    <%- body %> <!-- 内容插入点 -->
+  </main>
+  
+  <%- include('partials/footer') %>
+</body>
+</html>
+
+<!-- views/home.ejs -->
+<% layout('layout') -%>
+
+<h1>欢迎来到首页</h1>
+<p>当前时间: <%= new Date().toLocaleString() %></p>
+```
+
+#### 3.2 包含部分视图 (Partials)
+```ejs
+<!-- views/partials/header.ejs -->
+<header>
+  <nav>
+    <a href="/">首页</a>
+    <a href="/about">关于</a>
+  </nav>
+</header>
+
+<!-- 在模板中使用 -->
+<%- include('partials/header') %>
+```
+
+#### 3.3 自定义分隔符
+```javascript
+// 在 Express 中配置
+const ejs = require('ejs');
+ejs.delimiter = '?'; // 使用 ? 替代 %
+
+// 使用新分隔符
+app.engine('ejs', ejs.renderFile);
+```
+
+#### 3.4 过滤器功能
+```javascript
+// 注册自定义过滤器
+ejs.filters.currency = function(value) {
+  return '¥' + parseFloat(value).toFixed(2);
+};
+
+// 在模板中使用
+<p>价格: <%=: price | currency %></p>
+```
+
+### 4. EJS 最佳实践
+
+#### 4.1 模板组织策略
+```
+views/
+├── layouts/
+│   └── main.ejs
+├── partials/
+│   ├── header.ejs
+│   ├── footer.ejs
+│   └── head.ejs
+├── pages/
+│   ├── home.ejs
+│   ├── about.ejs
+│   └── contact.ejs
+└── components/
+    ├── product-card.ejs
+    └── user-profile.ejs
+```
+
+#### 4.2 数据传递与处理
+```javascript
+// 控制器中传递数据
+res.render('product', {
+  product: {
+    id: 123,
+    name: '智能手机',
+    price: 2999.99,
+    features: ['大屏幕', '长续航', '高清相机']
+  },
+  helpers: {
+    formatDate: (date) => date.toLocaleDateString()
+  }
+});
+
+// 模板中使用
+<h2><%= product.name %></h2>
+<p>发布日期: <%= helpers.formatDate(new Date()) %></p>
+```
+
+#### 4.3 避免过度逻辑
+```ejs
+<!-- 不推荐: 复杂逻辑在模板中 -->
+<% 
+  let discount = 0;
+  if (user.vipLevel > 3) {
+    discount = 0.2;
+  } else if (user.vipLevel > 1) {
+    discount = 0.1;
+  }
+%>
+
+<!-- 推荐: 逻辑在控制器中处理 -->
+<!-- 控制器 -->
+res.render('product', {
+  discount: calculateDiscount(user.vipLevel)
+});
+
+<!-- 模板中 -->
+<p>折扣: <%= discount * 100 %>%</p>
+```
+
+#### 4.4 XSS 防护策略
+```ejs
+<!-- 安全做法: 输出转义 -->
+<p><%= userInput %></p> <!-- 自动转义 HTML -->
+
+<!-- 需要原始 HTML 时明确标识 -->
+<p><%- sanitizedHtml %></p> <!-- 确保内容已消毒 -->
+
+<!-- 控制器中对用户输入消毒 -->
+const createDOMPurify = require('dompurify');
+const { JSDOM } = require('jsdom');
+const window = new JSDOM('').window;
+const DOMPurify = createDOMPurify(window);
+
+const sanitizedHtml = DOMPurify.sanitize(userInput);
+```
+
+### 5. EJS 性能优化
+
+#### 5.1 模板缓存
+```javascript
+// 开发环境禁用缓存
+app.set('view cache', false);
+
+// 生产环境启用缓存
+if (process.env.NODE_ENV === 'production') {
+  app.set('view cache', true);
+}
+```
+
+#### 5.2 预编译模板
+```javascript
+const ejs = require('ejs');
+const fs = require('fs');
+
+// 预编译模板
+const template = fs.readFileSync('views/template.ejs', 'utf8');
+const compiledTemplate = ejs.compile(template);
+
+// 渲染时使用编译后的函数
+app.get('/page', (req, res) => {
+  const html = compiledTemplate({ data: 'value' });
+  res.send(html);
+});
+```
+
+#### 5.3 异步渲染
+```javascript
+// 使用 ejs.renderFile 的 promise 版本
+const util = require('util');
+const renderFile = util.promisify(ejs.renderFile);
+
+app.get('/async-page', async (req, res) => {
+  try {
+    const html = await renderFile('views/async.ejs', {
+      fetchData: await fetchSomeData()
+    });
+    res.send(html);
+  } catch (err) {
+    res.status(500).send('渲染错误');
+  }
+});
+```
+
+### 6. 与其他模板引擎对比
+
+| **特性**     | EJS           | Pug      | Handlebars    | Nunjucks    |
+| ------------ | ------------- | -------- | ------------- | ----------- |
+| **语法**     | HTML 嵌入 JS  | 缩进式   | Mustache 风格 | Jinja2 风格 |
+| **学习曲线** | 低            | 中       | 低            | 中          |
+| **性能**     | 高            | 中       | 中            | 中          |
+| **逻辑支持** | 完整 JS       | 完整 JS  | 有限          | 完整 JS     |
+| **布局系统** | 需要扩展      | 内置     | 需要扩展      | 内置        |
+| **部分视图** | 支持          | 支持     | 支持          | 支持        |
+| **适合场景** | 传统 Web 应用 | 简洁模板 | 简单模板      | 复杂模板    |
+
+### 7. EJS 常见问题解决方案
+
+#### 7.1 变量未定义错误
+```ejs
+<!-- 安全访问嵌套属性 -->
+<p><%= user && user.address && user.address.city %></p>
+
+<!-- 或使用可选链 (Node.js 14+) -->
+<p><%= user?.address?.city %></p>
+```
+
+#### 7.2 包含文件路径问题
+```ejs
+<!-- 使用绝对路径 -->
+<%- include('/partials/header') %>
+
+<!-- 或设置根目录 -->
+const ejs = require('ejs');
+ejs.root = path.join(__dirname, 'views');
+```
+
+#### 7.3 处理换行问题
+```ejs
+<!-- 使用 '-' 移除换行 -->
+<% if (user) { -%>
+  <p>欢迎回来</p>
+<% } -%>
+```
+
+#### 7.4 国际化支持
+```javascript
+// 注册国际化过滤器
+ejs.filters.t = function(key) {
+  return i18n.t(key);
+};
+
+// 模板中使用
+<h1><%=: 'welcome_message' | t %></h1>
+```
+
+### 8. EJS 实战案例
+
+#### 8.1 动态表格生成
+```ejs
+<table>
+  <thead>
+    <tr>
+      <% Object.keys(products[0]).forEach(key => { %>
+        <th><%= key %></th>
+      <% }) %>
+    </tr>
+  </thead>
+  <tbody>
+    <% products.forEach(product => { %>
+      <tr>
+        <% Object.values(product).forEach(value => { %>
+          <td><%= value %></td>
+        <% }) %>
+      </tr>
+    <% }) %>
+  </tbody>
+</table>
+```
+
+#### 8.2 分页组件
+```ejs
+<div class="pagination">
+  <% if (currentPage > 1) { %>
+    <a href="/items?page=<%= currentPage-1 %>">上一页</a>
+  <% } %>
+  
+  <% for(let i=1; i<=totalPages; i++) { %>
+    <% if (i === currentPage) { %>
+      <span class="current"><%= i %></span>
+    <% } else { %>
+      <a href="/items?page=<%= i %>"><%= i %></a>
+    <% } %>
+  <% } %>
+  
+  <% if (currentPage < totalPages) { %>
+    <a href="/items?page=<%= currentPage+1 %>">下一页</a>
+  <% } %>
+</div>
+```
+
+#### 8.3 条件样式
+```ejs
+<div class="alert alert-<%= message.type %>">
+  <%= message.text %>
+</div>
+
+<style>
+  .alert-success { color: green; }
+  .alert-error { color: red; }
+  .alert-warning { color: orange; }
+</style>
+```
+
+### 9. EJS 扩展与进阶
+
+#### 9.1 客户端使用 EJS
+```html
+<!-- 浏览器中直接使用 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ejs/3.1.8/ejs.min.js"></script>
+
+<script>
+  const template = `
+    <h1><%= title %></h1>
+    <ul>
+      <% items.forEach(item => { %>
+        <li><%= item %></li>
+      <% }) %>
+    </ul>
+  `;
+  
+  const html = ejs.render(template, {
+    title: "客户端渲染",
+    items: ["项目1", "项目2"]
+  });
+  
+  document.getElementById('app').innerHTML = html;
+</script>
+```
+
+#### 9.2 与前端框架集成
+```javascript
+// 在 React 中使用 EJS 模板
+import ejs from 'ejs';
+import template from './template.ejs';
+
+function EjsComponent({ data }) {
+  const html = ejs.render(template, data);
+  
+  return (
+    <div dangerouslySetInnerHTML={{ __html: html }} />
+  );
+}
+```
+
+#### 9.3 自定义标签
+```javascript
+// 创建自定义标签
+ejs.open = '{{';
+ejs.close = '}}';
+
+// 模板中使用新标签
+{{= user.name }}
+```
+
+### 10、总结：EJS 核心价值
+
+1. **简单直观**：  
+   - 基于 HTML 的模板语法
+   - 直接嵌入 JavaScript 逻辑
+   - 无需学习新语法体系
+
+2. **灵活强大**：  
+   - 支持布局和部分视图
+   - 可扩展的过滤器和标签
+   - 完整的 JavaScript 能力
+
+3. **高性能**：  
+   - 模板编译缓存
+   - 高效的渲染机制
+   - 支持流式输出
+
+4. **全栈适用**：  
+   - 服务端渲染 (Node.js)
+   - 客户端渲染 (浏览器)
+   - 静态网站生成
+
+5. **生态丰富**：  
+   - 与 Express 完美集成
+   - 支持多种模板组织模式
+   - 丰富的扩展插件
+
+```ejs
+<%# EJS 是 Node.js 开发者的首选模板引擎之一 %>
+<%- include('partials/cta', { 
+  text: '开始使用 EJS', 
+  url: 'https://ejs.co' 
+}) %>
+```
+
+通过掌握 EJS，您可以高效地构建动态 Web 页面，分离业务逻辑与展示层，创建可维护的模板系统。无论是简单的博客还是复杂的企业应用，EJS 都能提供灵活、高效的解决方案。
