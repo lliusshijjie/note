@@ -4837,3 +4837,1167 @@ ejs.close = '}}';
 ```
 
 通过掌握 EJS，您可以高效地构建动态 Web 页面，分离业务逻辑与展示层，创建可维护的模板系统。无论是简单的博客还是复杂的企业应用，EJS 都能提供灵活、高效的解决方案。
+
+
+
+## 十五、MongoDB 
+
+MongoDB 是一个开源的、面向文档的 **NoSQL** 数据库。它被设计用来处理大量数据，并通过其灵活的模型支持现代应用开发。
+
+*   **NoSQL**： 意味着它不像 MySQL、PostgreSQL 这类关系型数据库（SQL）那样以表和行来组织数据。它使用 **JSON-like 的文档** 来存储数据，模式非常灵活。
+*   **面向文档**： 这是 MongoDB 的核心。所有数据都存储在“文档”（Document）中，这些文档在概念上类似于 JSON 对象，但在数据库中是以一种叫 BSON（Binary JSON）的二进制格式存储的。
+*   **高性能、高可用性、易扩展**： 这些都是它的设计目标。它支持复制（提供数据冗余和故障转移）和分片（将数据分布到多个机器上，实现水平扩展）。
+
+---
+
+### 1.  MongoDB 特性
+
+为了更好地理解，我们将其与熟悉的关系型数据库（如 MySQL）进行对比。
+
+| 特性         | **关系型数据库 (MySQL)**                                     | **MongoDB (NoSQL)**                                          |
+| :----------- | :----------------------------------------------------------- | :----------------------------------------------------------- |
+| **数据模型** | 结构化，基于表和行。需要预定义模式（Schema）。               | 非结构化，基于集合和文档。模式灵活（Schema-less）。          |
+| **数据存储** | 数据存储在行和列中。相关数据可能分散在多个表中。             | 数据以 JSON 文档形式存储。相关数据通常嵌入**同一个文档**中。 |
+| **查询语言** | 使用 **SQL**（结构化查询语言）。                             | 使用 **丰富的 JSON-like 查询语句**或聚合管道。               |
+| **扩展方式** | **垂直扩展**：通过增加单机性能（更强的 CPU，更大的内存）。   | **水平扩展**：通过增加更多机器（分片）来分担负载。           |
+| **事务**     | 支持完整的 **ACID** 事务（原子性、一致性、隔离性、持久性）。 | 早期版本不支持多文档事务，但 **4.0+ 版本已经支持跨文档的 ACID 事务**。 |
+| **适用场景** | 需要复杂查询、强一致性、结构化数据的应用（如金融系统、会计系统）。 | 需要快速迭代、灵活模式、水平扩展的应用（如内容管理系统、实时分析、物联网）。 |
+
+**核心优势总结：**
+
+1.  **灵活的模式（Schema Flexibility）**： 你不需要预先严格定义表结构。同一个集合（表）中的文档可以有不同的字段。这对于快速迭代的开发流程非常友好，可以随时添加新字段。
+2.  **开发友好**： 文档模型与 JavaScript 对象（JSON）无缝对接，非常适合 Node.js 等现代 Web 开发语言。开发者思考数据的方式和数据库存储数据的方式高度一致，减少了阻抗失配。
+3.  **高性能**： 通过嵌入式文档和数组，可以将经常需要一起查询的数据放在一起，通过单次查询就能获取所有相关数据，减少了昂贵的 `JOIN` 操作。
+4.  **高可用和可扩展性**： 内置的复制和分片功能使得构建大规模、高可用的应用变得相对容易。
+
+---
+
+### 2. 核心概念与术语
+
+理解 MongoDB 的第一步是掌握其核心术语，并与 SQL 进行对比记忆。
+
+| **SQL**           | **MongoDB**                 | **说明**                                        |
+| :---------------- | :-------------------------- | :---------------------------------------------- |
+| Database          | Database                    | 数据库，一个容器                                |
+| Table             | **Collection**              | **集合**，相当于表                              |
+| Row               | **Document**                | **文档**，相当于一行记录                        |
+| Column            | Field                       | **字段**，相当于一列                            |
+| Primary Key       | `_id`                       | **主键**，MongoDB 会自动创建 `_id` 字段作为主键 |
+| Table Joins       | `$lookup` (聚合阶段)        | 表连接，MongoDB 3.2+ 支持，但不常用             |
+| `INSERT INTO ...` | `db.collection.insertOne()` | 插入文档                                        |
+
+**一个具体的文档示例：**
+
+```json
+// 一个 `users` 集合中的文档
+{
+  "_id": ObjectId("507f1f77bcf86cd799439011"), // MongoDB 自动生成的唯一主键
+  "name": "John Doe",
+  "age": 30,
+  "email": "john.doe@example.com",
+  "hobbies": ["reading", "hiking", "gaming"], // 数组类型
+  "address": { // 嵌入式文档
+    "street": "123 Main St",
+    "city": "New York",
+    "zipcode": "10001"
+  },
+  "createdAt": ISODate("2023-10-27T10:00:00Z") // 日期类型
+}
+```
+
+---
+
+### 3. MongoDB的使用
+
+在 Node.js 中，你通常使用官方提供的 **`mongodb`** 驱动包或者更高级的 **ODM（对象文档映射）库 Mongoose**。
+
+#### 3.1 使用官方驱动（更底层，更灵活）
+
+```bash
+npm install mongodb
+```
+
+```javascript
+// app.js
+const { MongoClient } = require('mongodb');
+
+// 连接字符串，通常来自环境变量
+const uri = "mongodb://localhost:27017";
+const client = new MongoClient(uri);
+
+async function main() {
+  try {
+    await client.connect();
+    console.log("Connected to MongoDB");
+
+    const database = client.db('myblog'); // 使用 'myblog' 数据库
+    const posts = database.collection('posts'); // 获取 'posts' 集合
+
+    // 插入一个文档
+    const result = await posts.insertOne({
+      title: 'My First Post',
+      content: 'This is the content...',
+      author: 'John',
+      tags: ['mongodb', 'nodejs'],
+      createdAt: new Date()
+    });
+    console.log(`Document inserted with _id: ${result.insertedId}`);
+
+    // 查询所有文档
+    const cursor = posts.find();
+    await cursor.forEach(doc => console.log(doc));
+
+  } finally {
+    await client.close();
+  }
+}
+
+main().catch(console.error);
+```
+
+#### 3.2 使用 Mongoose（更高级，更常用）
+
+Mongoose 提供了模式（Schema）定义、数据验证、中间件、更简单的查询 API 等功能，大大提升了开发效率。
+
+```bash
+npm install mongoose
+```
+
+```javascript
+// models/Post.js - 定义数据模型
+const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
+
+// 1. 定义模式（虽然 MongoDB 灵活，但用 Mongoose 我们会定义结构以进行验证）
+const PostSchema = new Schema({
+  title: { type: String, required: true },
+  content: { type: String, required: true },
+  author: { type: String, default: 'Anonymous' },
+  tags: [String], // 字符串数组
+  createdAt: { type: Date, default: Date.now }
+});
+
+// 2. 创建模型
+module.exports = mongoose.model('Post', PostSchema);
+```
+
+```javascript
+// app.js - 使用模型
+const mongoose = require('mongoose');
+const Post = require('./models/Post');
+
+// 连接数据库
+mongoose.connect('mongodb://localhost:27017/myblog');
+
+async function main() {
+  // 创建一个帖子实例并保存
+  const newPost = new Post({
+    title: 'Learning MongoDB',
+    content: 'It\'s amazing!',
+    tags: ['database', 'webdev']
+  });
+
+  const savedPost = await newPost.save();
+  console.log(savedPost);
+
+  // 查询所有帖子
+  const allPosts = await Post.find();
+  console.log(allPosts);
+
+  // 条件查询
+  const nodePosts = await Post.find({ author: 'John', tags: 'nodejs' });
+  console.log(nodePosts);
+}
+
+main().catch(err => console.log(err));
+```
+
+---
+
+### 4. MongoDB 的适用与不适用场景
+
+#### 适用场景 ：
+*   **Web 和移动应用**： 用户档案、内容管理（博客、视频）、社交网络 feed 流。数据模型灵活，易于迭代。
+*   **实时分析**： 高性能的插入和聚合框架非常适合处理日志、事件数据并进行实时分析。
+*   **物联网（IoT）**： 处理来自大量传感器的时间序列数据。
+*   **目录和库存管理**： 产品属性千差万别，灵活的模式非常合适。
+
+#### 不适用场景 ：
+*   **需要复杂多表事务的应用**： 虽然 MongoDB 支持事务，但如果你的应用核心是大量的、复杂的跨表事务（如银行系统），成熟的 SQL 数据库可能是更稳妥的选择。
+*   **高度结构化的报表业务**： 需要大量复杂 `JOIN` 和 SQL 特定函数（如 `WINDOW` 函数）的报表场景，SQL 更具优势。
+*   **数据模型稳定且不变**： 如果业务逻辑非常固定，数据模型早已确定且不会改变，关系型数据库的严格性也是一种优势。
+
+---
+
+### 5. 总结
+
+MongoDB 是一个功能强大、灵活且对开发者友好的**面向文档的 NoSQL 数据库**。它的**灵活模式、与 JSON/JavaScript 的无缝集成、以及出色的横向扩展能力**使其成为现代应用开发，特别是 Node.js 全栈开发的绝佳选择。
+
+虽然它在复杂事务方面曾经是短板，但如今已不再是问题。选择 MongoDB 还是 SQL，最终取决于你的**具体应用需求、数据结构和团队技能**。对于大多数需要快速开发和迭代的 Web 应用来说，MongoDB 是一个非常强大和受欢迎的工具。
+
+
+
+## 十六、MongoDB 增删查改（CRUD）
+
+在 MongoDB 中，增删查改操作对应着数据库最基本的 CRUD 操作。MongoDB 提供了直观且强大的方法来实现这些功能，无论是通过 MongoDB Shell 还是各种编程语言驱动（如 Node.js）。
+
+### 1. CRUD 操作对应关系
+
+| 操作            | MongoDB 术语 | 主要方法                                      |
+| --------------- | ------------ | --------------------------------------------- |
+| **增** (Create) | 插入文档     | `insertOne()`, `insertMany()`                 |
+| **删** (Delete) | 删除文档     | `deleteOne()`, `deleteMany()`                 |
+| **查** (Read)   | 查询文档     | `find()`, `findOne()`                         |
+| **改** (Update) | 更新文档     | `updateOne()`, `updateMany()`, `replaceOne()` |
+
+### 2. 详细操作指南
+
+#### 2.1 增（Create） - 插入文档
+
+##### 插入单个文档
+```javascript
+// MongoDB Shell
+db.users.insertOne({
+  name: "张三",
+  age: 28,
+  email: "zhangsan@example.com",
+  hobbies: ["阅读", "游泳"],
+  createdAt: new Date()
+});
+
+// Node.js (使用官方驱动)
+const result = await db.collection('users').insertOne({
+  name: "张三",
+  age: 28,
+  email: "zhangsan@example.com"
+});
+console.log(`插入文档ID: ${result.insertedId}`);
+
+// Node.js (使用 Mongoose)
+const user = new User({
+  name: "张三",
+  age: 28,
+  email: "zhangsan@example.com"
+});
+const savedUser = await user.save();
+```
+
+##### 插入多个文档
+```javascript
+// MongoDB Shell
+db.users.insertMany([
+  {
+    name: "李四",
+    age: 32,
+    email: "lisi@example.com"
+  },
+  {
+    name: "王五",
+    age: 25,
+    email: "wangwu@example.com"
+  }
+]);
+
+// Node.js
+const result = await db.collection('users').insertMany([
+  { name: "李四", age: 32 },
+  { name: "王五", age: 25 }
+]);
+console.log(`插入了 ${result.insertedCount} 个文档`);
+```
+
+#### 2.2 查（Read） - 查询文档
+
+##### 查询所有文档
+```javascript
+// MongoDB Shell
+db.users.find();
+
+// Node.js
+const users = await db.collection('users').find().toArray();
+console.log(users);
+
+// Mongoose
+const users = await User.find();
+```
+
+##### 条件查询
+```javascript
+// 等值查询
+db.users.find({ age: 28 });
+
+// 比较查询 ($gt:大于, $lt:小于, $gte:大于等于, $lte:小于等于)
+db.users.find({ age: { $gt: 25 } }); // 年龄大于25
+db.users.find({ age: { $gte: 18, $lte: 30 } }); // 年龄在18到30之间
+
+// 包含查询 ($in)
+db.users.find({ name: { $in: ["张三", "李四"] } });
+
+// 逻辑查询 ($and, $or)
+db.users.find({ $and: [{ age: { $gt: 25 } }, { age: { $lt: 35 } }] });
+db.users.find({ $or: [{ age: 25 }, { name: "张三" }] });
+
+// 正则表达式查询
+db.users.find({ name: /^张/ }); // 名字以"张"开头
+
+// 数组查询
+db.users.find({ hobbies: "游泳" }); // 爱好包含"游泳"
+db.users.find({ hobbies: { $all: ["阅读", "游泳"] } }); // 爱好同时包含"阅读"和"游泳"
+db.users.find({ "hobbies.0": "阅读" }); // 第一个爱好是"阅读"
+```
+
+##### 投影（选择返回字段）
+```javascript
+// 只返回name和age字段，不返回_id
+db.users.find({}, { name: 1, age: 1, _id: 0 });
+
+// 排除email字段
+db.users.find({}, { email: 0 });
+```
+
+##### 排序、限制和跳过
+```javascript
+// 按年龄降序排序
+db.users.find().sort({ age: -1 });
+
+// 按年龄升序排序，然后按名字降序排序
+db.users.find().sort({ age: 1, name: -1 });
+
+// 限制返回结果数量
+db.users.find().limit(10);
+
+// 跳过前5个文档
+db.users.find().skip(5);
+
+// 分页查询：每页10条，第3页
+db.users.find().skip(20).limit(10);
+```
+
+##### 聚合查询
+```javascript
+// 按年龄分组统计人数
+db.users.aggregate([
+  { $group: { _id: "$age", count: { $sum: 1 } } },
+  { $sort: { _id: 1 } }
+]);
+
+// 多阶段聚合：匹配、分组、排序
+db.users.aggregate([
+  { $match: { age: { $gt: 25 } } }, // 筛选年龄大于25的用户
+  { $group: { _id: "$age", count: { $sum: 1 } } }, // 按年龄分组统计
+  { $sort: { count: -1 } } // 按统计数降序排序
+]);
+```
+
+#### 2.3 改（Update） - 更新文档
+
+##### 更新单个文档
+```javascript
+// 设置字段值
+db.users.updateOne(
+  { name: "张三" }, // 筛选条件
+  { $set: { age: 29, updatedAt: new Date() } } // 更新操作
+);
+
+// 增加数值
+db.users.updateOne(
+  { name: "张三" },
+  { $inc: { age: 1 } } // 年龄增加1
+);
+
+// 添加数组元素
+db.users.updateOne(
+  { name: "张三" },
+  { $push: { hobbies: "跑步" } } // 添加爱好
+);
+
+// 添加不重复的数组元素
+db.users.updateOne(
+  { name: "张三" },
+  { $addToSet: { hobbies: "跑步" } } // 如果不存在才添加
+);
+
+// 删除数组元素
+db.users.updateOne(
+  { name: "张三" },
+  { $pull: { hobbies: "游泳" } } // 删除爱好中的"游泳"
+);
+```
+
+##### 更新多个文档
+
+```javascript
+// 将所有用户的status字段设置为"active"
+db.users.updateMany(
+  {}, // 空筛选条件表示所有文档
+  { $set: { status: "active" } }
+);
+
+// 将年龄大于30的用户的状态设置为"senior"
+db.users.updateMany(
+  { age: { $gt: 30 } },
+  { $set: { status: "senior" } }
+);
+```
+
+##### 替换整个文档
+```javascript
+db.users.replaceOne(
+  { name: "张三" },
+  { 
+    name: "张三", 
+    age: 29, 
+    email: "new-email@example.com",
+    updatedAt: new Date()
+  }
+);
+```
+
+#### 2.4 删（Delete） - 删除文档
+
+##### 删除单个文档
+```javascript
+// 删除名为"张三"的用户
+db.users.deleteOne({ name: "张三" });
+
+// 删除年龄最小的用户
+db.users.deleteOne({}, { sort: { age: 1 } });
+```
+
+##### 删除多个文档
+```javascript
+// 删除所有年龄小于18的用户
+db.users.deleteMany({ age: { $lt: 18 } });
+
+// 删除所有文档（清空集合）
+db.users.deleteMany({});
+```
+
+##### 删除整个集合
+```javascript
+// 删除整个users集合
+db.users.drop();
+```
+
+### 3. MongoDB 查询操作符详解
+
+#### 3.1 比较操作符
+| 操作符 | 描述       | 示例                              |
+| ------ | ---------- | --------------------------------- |
+| `$eq`  | 等于       | `{ age: { $eq: 25 } }`            |
+| `$ne`  | 不等于     | `{ age: { $ne: 25 } }`            |
+| `$gt`  | 大于       | `{ age: { $gt: 25 } }`            |
+| `$gte` | 大于等于   | `{ age: { $gte: 25 } }`           |
+| `$lt`  | 小于       | `{ age: { $lt: 25 } }`            |
+| `$lte` | 小于等于   | `{ age: { $lte: 25 } }`           |
+| `$in`  | 在数组中   | `{ age: { $in: [25, 30, 35] } }`  |
+| `$nin` | 不在数组中 | `{ age: { $nin: [25, 30, 35] } }` |
+
+#### 3.2 逻辑操作符
+| 操作符 | 描述     | 示例                                                     |
+| ------ | -------- | -------------------------------------------------------- |
+| `$and` | 逻辑与   | `{ $and: [{ age: { $gt: 25 } }, { age: { $lt: 35 } }] }` |
+| `$or`  | 逻辑或   | `{ $or: [{ age: 25 }, { name: "张三" }] }`               |
+| `$not` | 逻辑非   | `{ age: { $not: { $gt: 25 } } }`                         |
+| `$nor` | 逻辑非或 | `{ $nor: [{ age: 25 }, { name: "张三" }] }`              |
+
+#### 3.3 元素操作符
+| 操作符    | 描述         | 示例                           |
+| --------- | ------------ | ------------------------------ |
+| `$exists` | 字段存在     | `{ email: { $exists: true } }` |
+| `$type`   | 字段类型匹配 | `{ age: { $type: "int" } }`    |
+
+#### 3.4 数组操作符
+| 操作符       | 描述             | 示例                                               |
+| ------------ | ---------------- | -------------------------------------------------- |
+| `$all`       | 包含所有指定元素 | `{ hobbies: { $all: ["阅读", "游泳"] } }`          |
+| `$elemMatch` | 数组元素匹配条件 | `{ scores: { $elemMatch: { $gt: 80, $lt: 90 } } }` |
+| `$size`      | 数组大小         | `{ hobbies: { $size: 3 } }`                        |
+
+### 4. 实际应用示例
+
+#### 用户管理系统操作示例
+```javascript
+// 1. 添加新用户
+const addUser = async (userData) => {
+  const result = await db.collection('users').insertOne({
+    ...userData,
+    createdAt: new Date(),
+    status: 'active'
+  });
+  return result.insertedId;
+};
+
+// 2. 查询活跃用户
+const getActiveUsers = async () => {
+  return await db.collection('users')
+    .find({ status: 'active' })
+    .sort({ createdAt: -1 })
+    .toArray();
+};
+
+// 3. 更新用户信息
+const updateUserEmail = async (userId, newEmail) => {
+  const result = await db.collection('users').updateOne(
+    { _id: new ObjectId(userId) },
+    { $set: { email: newEmail, updatedAt: new Date() } }
+  );
+  return result.modifiedCount;
+};
+
+// 4. 删除非活跃用户
+const deleteInactiveUsers = async () => {
+  const result = await db.collection('users').deleteMany({
+    status: 'inactive',
+    lastLogin: { $lt: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000) } // 一年前
+  });
+  return result.deletedCount;
+};
+
+// 5. 搜索用户（支持分页）
+const searchUsers = async (query, page = 1, limit = 10) => {
+  const skip = (page - 1) * limit;
+  const filter = {
+    $or: [
+      { name: new RegExp(query, 'i') },
+      { email: new RegExp(query, 'i') }
+    ]
+  };
+  
+  const [users, total] = await Promise.all([
+    db.collection('users')
+      .find(filter)
+      .skip(skip)
+      .limit(limit)
+      .toArray(),
+    db.collection('users').countDocuments(filter)
+  ]);
+  
+  return {
+    users,
+    total,
+    page,
+    totalPages: Math.ceil(total / limit)
+  };
+};
+```
+
+### 5. 最佳实践与性能提示
+
+1. **索引优化**：
+   ```javascript
+   // 创建索引提高查询性能
+   db.users.createIndex({ email: 1 }); // 单字段索引
+   db.users.createIndex({ name: 1, age: -1 }); // 复合索引
+   db.users.createIndex({ "address.city": 1 }); // 嵌套字段索引
+   ```
+
+2. **批量操作**：
+   ```javascript
+   // 批量插入比多次单条插入更高效
+   const bulk = db.users.initializeUnorderedBulkOp();
+   bulk.insert({ name: "用户1" });
+   bulk.insert({ name: "用户2" });
+   bulk.execute();
+   ```
+
+3. **投影优化**：
+   ```javascript
+   // 只返回需要的字段，减少网络传输
+   db.users.find({}, { name: 1, email: 1 });
+   ```
+
+4. **使用 explain() 分析查询**：
+   ```javascript
+   // 分析查询性能
+   db.users.find({ age: { $gt: 25 } }).explain("executionStats");
+   ```
+
+5. **适当的写关注（Write Concern）**：
+   ```javascript
+   // 根据需求平衡数据安全性和写入性能
+   db.users.insertOne(doc, { writeConcern: { w: 1 } }); // 默认，确认写入主节点
+   db.users.insertOne(doc, { writeConcern: { w: "majority" } }); // 确保写入大多数节点
+   ```
+
+### 6. 总结
+
+MongoDB 提供了丰富而灵活的 CRUD 操作接口：
+
+- **增**：使用 `insertOne()` 和 `insertMany()` 添加文档
+- **删**：使用 `deleteOne()` 和 `deleteMany()` 删除文档
+- **查**：使用 `find()` 配合丰富的查询操作符检索文档
+- **改**：使用 `updateOne()`、`updateMany()` 和更新操作符修改文档
+
+掌握这些操作是使用 MongoDB 的基础，结合索引优化、适当的查询设计和批量操作，可以构建出高性能的数据库应用。在实际开发中，建议结合具体业务场景选择合适的操作方法和优化策略。
+
+
+
+## 十七、Mongoose 
+
+Mongoose 是 Node.js 中最流行的 MongoDB 对象文档映射（ODM）库，它提供了基于模式的解决方案来建模应用数据，大大简化了 MongoDB 的操作和数据管理。
+
+### 1. Mongoose 核心价值
+
+#### 1.1 与传统 MongoDB 驱动的对比
+| **特性**     | **原生 MongoDB 驱动** | **Mongoose**                |
+| ------------ | --------------------- | --------------------------- |
+| **数据验证** | 无内置验证            | 强大的内置验证器            |
+| **模式定义** | 无模式约束            | 严格的模式定义              |
+| **关系处理** | 手动处理引用          | 自动 Population（关联查询） |
+| **中间件**   | 无                    | 支持 pre/post 钩子          |
+| **业务逻辑** | 需要在代码中实现      | 可定义实例方法和静态方法    |
+| **开发效率** | 较低，需要写更多代码  | 较高，提供丰富API           |
+
+#### 1.2 核心优势
+- **数据建模**：通过 Schema 定义数据结构
+- **数据验证**：内置和自定义验证规则
+- **业务逻辑封装**：模型方法封装数据操作
+- **中间件支持**：在操作前后执行自定义逻辑
+- **查询构建**：链式调用构建复杂查询
+
+### 2. 核心概念与架构
+
+#### 2.1 Mongoose 架构层次
+```
+┌────────────────────┐
+│      Schema        │  ← 定义数据结构/验证规则
+├────────────────────┤
+│       Model        │  ← 由 Schema 编译而成的构造函数
+├────────────────────┤
+│     Document       │  ← 由 Model 创建的实例
+└────────────────────┘
+```
+
+#### 2.2 核心组件详解
+
+##### Schema（模式）
+```javascript
+const mongoose = require('mongoose');
+const { Schema } = mongoose;
+
+// 定义用户模式
+const userSchema = new Schema({
+  name: {
+    type: String,
+    required: [true, '用户名不能为空'],
+    trim: true,
+    minlength: [2, '用户名至少2个字符'],
+    maxlength: [50, '用户名不能超过50个字符']
+  },
+  email: {
+    type: String,
+    required: true,
+    unique: true,
+    lowercase: true,
+    match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, '邮箱格式不正确']
+  },
+  age: {
+    type: Number,
+    min: [18, '年龄必须大于18岁'],
+    max: [120, '年龄必须小于120岁']
+  },
+  role: {
+    type: String,
+    enum: {
+      values: ['user', 'admin', 'moderator'],
+      message: '角色必须是 user、admin 或 moderator'
+    },
+    default: 'user'
+  },
+  hobbies: [{
+    type: String,
+    trim: true
+  }],
+  address: {
+    street: String,
+    city: String,
+    zipCode: String
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+    immutable: true // 创建后不可修改
+  },
+  updatedAt: {
+    type: Date,
+    default: Date.now
+  }
+}, {
+  timestamps: true, // 自动管理 createdAt 和 updatedAt
+  toJSON: { virtuals: true }, // 虚拟字段包含在 JSON 输出中
+  toObject: { virtuals: true }
+});
+```
+
+##### Model（模型）
+```javascript
+// 从 Schema 编译模型
+const User = mongoose.model('User', userSchema);
+
+// 模型名称 'User' 对应 MongoDB 中的 'users' 集合
+// Mongoose 自动将模型名称转换为小写复数形式
+```
+
+##### Document（文档）
+```javascript
+// 创建文档实例
+const user = new User({
+  name: '张三',
+  email: 'zhangsan@example.com',
+  age: 25
+});
+
+// 文档实例方法
+const savedUser = await user.save(); // 保存到数据库
+user.age = 26;
+await user.save(); // 更新文档
+```
+
+### 3. 完整工作流程示例
+
+#### 3.1 连接数据库
+```javascript
+const mongoose = require('mongoose');
+
+// 连接 MongoDB
+mongoose.connect('mongodb://localhost:27017/myapp', {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+  serverSelectionTimeoutMS: 5000,
+  socketTimeoutMS: 45000
+});
+
+// 连接事件处理
+mongoose.connection.on('connected', () => {
+  console.log('MongoDB 连接成功');
+});
+
+mongoose.connection.on('error', (err) => {
+  console.error('MongoDB 连接错误:', err);
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.log('MongoDB 连接断开');
+});
+
+// 优雅关闭连接
+process.on('SIGINT', async () => {
+  await mongoose.connection.close();
+  console.log('MongoDB 连接已关闭');
+  process.exit(0);
+});
+```
+
+#### 3.2 定义模型
+```javascript
+// models/User.js
+const mongoose = require('mongoose');
+
+const userSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  status: { type: String, enum: ['active', 'inactive'], default: 'active' }
+}, { timestamps: true });
+
+// 添加实例方法
+userSchema.methods.getProfile = function() {
+  return {
+    id: this._id,
+    name: this.name,
+    email: this.email,
+    status: this.status
+  };
+};
+
+// 添加静态方法
+userSchema.statics.findByEmail = function(email) {
+  return this.findOne({ email });
+};
+
+// 添加查询助手
+userSchema.query.active = function() {
+  return this.where({ status: 'active' });
+};
+
+module.exports = mongoose.model('User', userSchema);
+```
+
+#### 3.3 使用模型进行 CRUD 操作
+```javascript
+const User = require('./models/User');
+
+// 创建用户
+const createUser = async (userData) => {
+  try {
+    const user = new User(userData);
+    return await user.save();
+  } catch (error) {
+    if (error.code === 11000) {
+      throw new Error('邮箱已存在');
+    }
+    throw error;
+  }
+};
+
+// 查询用户
+const findUsers = async () => {
+  return await User.find()
+    .active() // 使用查询助手
+    .select('name email') // 选择字段
+    .sort({ createdAt: -1 }) // 排序
+    .limit(10); // 限制数量
+};
+
+// 更新用户
+const updateUser = async (userId, updates) => {
+  return await User.findByIdAndUpdate(
+    userId,
+    updates,
+    { 
+      new: true, // 返回更新后的文档
+      runValidators: true // 运行验证
+    }
+  );
+};
+
+// 删除用户
+const deleteUser = async (userId) => {
+  return await User.findByIdAndDelete(userId);
+};
+```
+
+### 4. 高级特性详解
+
+#### 4.1 数据关联与 Population
+```javascript
+// 定义博客文章模型
+const postSchema = new mongoose.Schema({
+  title: String,
+  content: String,
+  author: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User', // 引用 User 模型
+    required: true
+  },
+  comments: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Comment'
+  }]
+});
+
+const Post = mongoose.model('Post', postSchema);
+
+// 使用 Population 填充引用
+const posts = await Post.find()
+  .populate('author', 'name email') // 填充作者，只返回name和email
+  .populate({
+    path: 'comments',
+    populate: { path: 'author', select: 'name' } // 嵌套填充
+  });
+```
+
+#### 4.2 中间件（钩子函数）
+```javascript
+userSchema.pre('save', async function(next) {
+  // 保存前加密密码
+  if (this.isModified('password')) {
+    this.password = await bcrypt.hash(this.password, 12);
+  }
+  this.updatedAt = Date.now();
+  next();
+});
+
+userSchema.post('save', function(doc, next) {
+  // 保存后发送欢迎邮件
+  sendWelcomeEmail(doc.email);
+  next();
+});
+
+userSchema.pre('remove', async function(next) {
+  // 删除用户前删除相关数据
+  await Post.deleteMany({ author: this._id });
+  next();
+});
+```
+
+#### 4.3 虚拟字段
+```javascript
+userSchema.virtual('fullName').get(function() {
+  return `${this.firstName} ${this.lastName}`;
+});
+
+userSchema.virtual('profileUrl').get(function() {
+  return `/users/${this._id}/profile`;
+});
+
+// 设置虚拟字段（不会保存到数据库）
+userSchema.virtual('nickname').set(function(nickname) {
+  this.name = nickname;
+});
+```
+
+#### 4.4 聚合管道
+```javascript
+const userStats = await User.aggregate([
+  { $match: { status: 'active' } },
+  { $group: {
+    _id: '$role',
+    count: { $sum: 1 },
+    averageAge: { $avg: '$age' }
+  }},
+  { $sort: { count: -1 } }
+]);
+```
+
+#### 4.5 数据验证进阶
+```javascript
+const productSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    validate: {
+      validator: function(v) {
+        return /^[A-Z][a-zA-Z0-9\s]*$/.test(v); // 自定义验证规则
+      },
+      message: '产品名必须以大写字母开头'
+    }
+  },
+  price: {
+    type: Number,
+    validate: {
+      validator: function(v) {
+        return v > 0; // 价格必须大于0
+      },
+      message: '价格必须大于0'
+    }
+  },
+  category: {
+    type: String,
+    enum: {
+      values: ['electronics', 'clothing', 'books'],
+      message: '分类必须是 electronics、clothing 或 books'
+    }
+  }
+});
+```
+
+### 5. 最佳实践与性能优化
+
+#### 5.1 连接池管理
+```javascript
+// 配置连接池
+mongoose.connect(uri, {
+  poolSize: 10, // 连接池大小
+  bufferMaxEntries: 0, // 禁用缓冲
+  bufferCommands: false // 禁用命令缓冲
+});
+```
+
+#### 5.2 索引优化
+```javascript
+userSchema.index({ email: 1 }); // 单字段索引
+userSchema.index({ name: 1, email: -1 }); // 复合索引
+userSchema.index({ 'address.city': 1 }); // 嵌套字段索引
+userSchema.index({ createdAt: 1 }, { expireAfterSeconds: 3600 }); // TTL索引
+
+// 文本搜索索引
+userSchema.index({ name: 'text', bio: 'text' });
+```
+
+#### 5.3 查询优化
+```javascript
+// 使用 select() 限制返回字段
+const users = await User.find().select('name email -_id');
+
+// 使用 lean() 返回普通 JavaScript 对象（性能更好）
+const users = await User.find().lean();
+
+// 批量操作
+await User.bulkWrite([
+  { insertOne: { document: { name: 'User1' } } },
+  { updateOne: { 
+    filter: { name: 'User2' }, 
+    update: { $set: { status: 'active' } } 
+  }}
+]);
+```
+
+#### 5.4 错误处理
+```javascript
+// 统一错误处理中间件
+app.use(async (err, req, res, next) => {
+  if (err instanceof mongoose.Error.ValidationError) {
+    return res.status(400).json({
+      error: '验证错误',
+      details: Object.values(err.errors).map(e => e.message)
+    });
+  }
+  
+  if (err instanceof mongoose.Error.CastError) {
+    return res.status(400).json({
+      error: 'ID格式错误'
+    });
+  }
+  
+  if (err.code === 11000) {
+    return res.status(409).json({
+      error: '数据已存在'
+    });
+  }
+  
+  next(err);
+});
+```
+
+### 6. 实际应用场景
+
+#### 6.1 用户认证系统
+```javascript
+// models/User.js
+userSchema.methods.comparePassword = async function(candidatePassword) {
+  return await bcrypt.compare(candidatePassword, this.password);
+};
+
+userSchema.methods.generateAuthToken = function() {
+  return jwt.sign(
+    { userId: this._id }, 
+    process.env.JWT_SECRET, 
+    { expiresIn: '7d' }
+  );
+};
+
+// 在控制器中使用
+const login = async (email, password) => {
+  const user = await User.findOne({ email });
+  if (!user || !(await user.comparePassword(password))) {
+    throw new Error('邮箱或密码错误');
+  }
+  
+  return {
+    user: user.getProfile(),
+    token: user.generateAuthToken()
+  };
+};
+```
+
+#### 6.2 分页查询
+```javascript
+const getUsersWithPagination = async (page = 1, limit = 10, filter = {}) => {
+  const skip = (page - 1) * limit;
+  
+  const [users, total] = await Promise.all([
+    User.find(filter)
+      .skip(skip)
+      .limit(limit)
+      .sort({ createdAt: -1 }),
+    User.countDocuments(filter)
+  ]);
+  
+  return {
+    users,
+    pagination: {
+      page,
+      limit,
+      total,
+      pages: Math.ceil(total / limit)
+    }
+  };
+};
+```
+
+#### 6.3 软删除模式
+```javascript
+// 添加 deleted 字段
+userSchema.add({
+  deleted: {
+    type: Boolean,
+    default: false
+  },
+  deletedAt: Date
+});
+
+// 重写删除方法
+userSchema.statics.softDelete = function(id) {
+  return this.findByIdAndUpdate(id, {
+    deleted: true,
+    deletedAt: new Date()
+  });
+};
+
+// 修改查询行为
+userSchema.pre(/^find/, function(next) {
+  if (!this.getQuery().deleted) {
+    this.where({ deleted: { $ne: true } });
+  }
+  next();
+});
+```
+
+### 7. 常见问题与解决方案
+
+#### 7.1 连接池耗尽
+```javascript
+// 监控连接池状态
+mongoose.connection.on('connected', () => {
+  console.log(`连接池大小: ${mongoose.connection.poolSize}`);
+});
+
+// 定期清理空闲连接
+setInterval(() => {
+  mongoose.connection.db.admin().ping((err, result) => {
+    if (err) console.error('连接心跳检测失败:', err);
+  });
+}, 30000);
+```
+
+#### 7.2 验证错误处理
+```javascript
+try {
+  const user = new User(invalidData);
+  await user.save();
+} catch (error) {
+  if (error.name === 'ValidationError') {
+    const errors = Object.values(error.errors).map(e => e.message);
+    console.log('验证错误:', errors);
+  }
+}
+```
+
+#### 7.3 性能监控
+```javascript
+// 启用查询日志
+mongoose.set('debug', (collectionName, method, query, doc) => {
+  console.log(`Mongoose: ${collectionName}.${method}`, JSON.stringify(query));
+});
+
+// 监控慢查询
+mongoose.set('debug', function(collectionName, method, query, queryOptions) {
+  if (queryOptions && queryOptions.slow) {
+    console.warn('慢查询:', collectionName, method, query);
+  }
+});
+```
+
+### 8. 总结：Mongoose 核心价值
+
+Mongoose 通过以下特性为 MongoDB 开发提供了强大支持：
+
+1. **结构化数据建模**：Schema 定义数据结构和验证规则
+2. **丰富的验证系统**：内置和自定义验证器确保数据完整性
+3. **强大的查询 API**：链式调用、Population、聚合管道
+4. **中间件系统**：在操作生命周期中插入自定义逻辑
+5. **业务逻辑封装**：实例方法、静态方法、虚拟字段
+6. **类型安全**：TypeScript 支持提供更好的开发体验
+
+**适用场景**：
+- 需要严格数据验证的应用
+- 复杂的数据关系和查询需求
+- 需要封装业务逻辑的数据操作
+- 企业级应用开发
+
+**不适用场景**：
+- 极简的 CRUD 操作（可直接使用原生驱动）
+- 对性能有极致要求的场景（可考虑使用 lean() 查询）
+
+Mongoose 通过提供丰富的功能和良好的开发体验，成为 Node.js + MongoDB 技术栈的事实标准，特别适合构建中大型企业级应用。
